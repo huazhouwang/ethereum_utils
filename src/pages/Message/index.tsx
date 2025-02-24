@@ -1,11 +1,11 @@
-import { MessageEditorView } from './view';
-import { useCallback, useState } from 'react';
-import { MessageSignMethod, Methods } from './methods';
 import { Snackbar } from '@material-ui/core';
 import MuiAlert from '@material-ui/lab/Alert';
-import { easyCheckSignature, stringifyProviderError } from './helper';
 import * as ethUtil from 'ethereumjs-util';
+import { useCallback, useState } from 'react';
 import { useInjectedWeb3React, useWeb3ReactActivate } from '../../hooks';
+import { easyCheckSignature, stringifyProviderError } from './helper';
+import { MessageSignMethod, Methods } from './methods';
+import { MessageEditorView } from './view';
 
 const recoverAddress = (messageHash: string, signature: string): string => {
   const hashBuffer = ethUtil.toBuffer(messageHash);
@@ -100,6 +100,7 @@ const MessageEditor = () => {
         onMethodSelected={setSelectedMethod}
         cases={method.cases}
         preferJsonStringMessage={method.preferJsonStringMessage}
+        partialHashMessage={method.partialHashMessage}
         hashMessage={method.hashMessage}
         checkIsTargetMessage={method.checkIsTargetMessage}
         onSign={onSign}

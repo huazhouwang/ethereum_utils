@@ -1,17 +1,20 @@
+import { Web3ReactContextInterface } from '@web3-react/core/dist/types';
+import * as signUtil from 'eth-sig-util';
+import * as ethUtil from 'ethereumjs-util';
 import {
   easyCheckLegacyEIP712Struct,
   easyCheckMessageHash,
   easyCheckStandardEIP712Struct,
 } from './helper';
-import { Web3ReactContextInterface } from '@web3-react/core/dist/types';
-import * as ethUtil from 'ethereumjs-util';
-import * as signUtil from 'eth-sig-util';
 
 export interface MessageSignMethod {
   name: string;
   cases: Array<{ name: string; value: string }>;
   preferJsonStringMessage?: boolean;
   checkIsTargetMessage: (message: string) => boolean;
+  partialHashMessage?: (
+    message: string,
+  ) => Promise<{ domainHash: string; messageHash: string }>;
   hashMessage: (message: string) => Promise<string>;
   signMessage: (
     web3: Web3ReactContextInterface,
@@ -155,6 +158,33 @@ export const Methods: { [key: string]: MessageSignMethod } = {
     ],
     preferJsonStringMessage: true,
     checkIsTargetMessage: easyCheckStandardEIP712Struct,
+    partialHashMessage: async (
+      message: string,
+    ): Promise<{ domainHash: string; messageHash: string }> => {
+      const typedData = JSON.parse(message);
+      const sanitized = signUtil.TypedDataUtils.sanitizeData(typedData);
+      const domainHash = ethUtil.addHexPrefix(
+        signUtil.TypedDataUtils.hashStruct(
+          'EIP712Domain',
+          sanitized.domain,
+          sanitized.types,
+          false,
+        ).toString('hex'),
+      );
+      const messageHash =
+        typeof sanitized.primaryType === 'string' &&
+        sanitized.primaryType !== 'EIP712Domain'
+          ? ethUtil.addHexPrefix(
+              signUtil.TypedDataUtils.hashStruct(
+                sanitized.primaryType as string,
+                sanitized.message,
+                sanitized.types,
+                false,
+              ).toString('hex'),
+            )
+          : '0x0000000000000000000000000000000000000000000000000000000000000000';
+      return { domainHash, messageHash };
+    },
     hashMessage: async (message: string): Promise<string> =>
       ethUtil.addHexPrefix(
         signUtil.TypedDataUtils.sign(JSON.parse(message), false).toString(
@@ -197,6 +227,33 @@ export const Methods: { [key: string]: MessageSignMethod } = {
     ],
     preferJsonStringMessage: true,
     checkIsTargetMessage: easyCheckStandardEIP712Struct,
+    partialHashMessage: async (
+      message: string,
+    ): Promise<{ domainHash: string; messageHash: string }> => {
+      const typedData = JSON.parse(message);
+      const sanitized = signUtil.TypedDataUtils.sanitizeData(typedData);
+      const domainHash = ethUtil.addHexPrefix(
+        signUtil.TypedDataUtils.hashStruct(
+          'EIP712Domain',
+          sanitized.domain,
+          sanitized.types,
+          true,
+        ).toString('hex'),
+      );
+      const messageHash =
+        typeof sanitized.primaryType === 'string' &&
+        sanitized.primaryType !== 'EIP712Domain'
+          ? ethUtil.addHexPrefix(
+              signUtil.TypedDataUtils.hashStruct(
+                sanitized.primaryType as string,
+                sanitized.message,
+                sanitized.types,
+                true,
+              ).toString('hex'),
+            )
+          : '0x0000000000000000000000000000000000000000000000000000000000000000';
+      return { domainHash, messageHash };
+    },
     hashMessage: async (message: string): Promise<string> =>
       ethUtil.addHexPrefix(
         signUtil.TypedDataUtils.sign(JSON.parse(message), true).toString('hex'),

@@ -6,13 +6,13 @@ import {
   Select,
   Typography,
 } from '@material-ui/core';
-import { Column, Row, SizedBox } from '../../components/basic';
 import { useCallback, useEffect, useState } from 'react';
-import { easyCheckMessageHash } from './helper';
+import { Column, Row, SizedBox } from '../../components/basic';
 import Editor from '../../components/Editor';
 import LabelText from '../../components/LabelText';
 import PagePaper from '../../components/PagePaper';
 import { prettify } from '../../utils';
+import { easyCheckMessageHash } from './helper';
 
 export interface MessageViewProps {
   methodOptions: Array<string>;
@@ -21,6 +21,9 @@ export interface MessageViewProps {
   cases: Array<{ name: string; value: string }>;
   checkIsTargetMessage: (message: string) => boolean;
   hashMessage: (message: string) => Promise<string>;
+  partialHashMessage?: (
+    message: string,
+  ) => Promise<{ domainHash: string; messageHash: string }>;
   isWalletEnabled: boolean;
   connectedAccount?: string | null;
   connectWallet: () => void;
@@ -58,6 +61,7 @@ export const MessageEditorView = ({
   cases,
   checkIsTargetMessage,
   hashMessage,
+  partialHashMessage,
   isWalletEnabled,
   connectedAccount,
   connectWallet,
@@ -67,6 +71,11 @@ export const MessageEditorView = ({
   const classes = useStyle();
   const [messageValue, setMessageValue] = useState<string>('');
   const [messageHashValue, setMessageHashValue] = useState<string>('');
+  // eslint-disable-next-line
+  const [domainHashValue, setDomainHashValue] = useState<string>('');
+  // eslint-disable-next-line
+  const [eip712MessageHashValue, setEip712MessageHashValue] =
+    useState<string>('');
   const [signatureValue, setSignatureValue] = useState<string>('');
   const [disabledSignBtn, setDisabledSignBtn] = useState<boolean>(true);
   const [recoveredAddress, setRecoveredAddress] = useState<string>('');
@@ -105,6 +114,14 @@ export const MessageEditorView = ({
       try {
         let message = messageValue;
         if (message && checkIsTargetMessage(message)) {
+          if (partialHashMessage) {
+            const { domainHash, messageHash } = await partialHashMessage(
+              message,
+            );
+            setDomainHashValue(domainHash);
+            setEip712MessageHashValue(messageHash);
+          }
+
           const messageHash: string = await hashMessage(message);
 
           if (easyCheckMessageHash(messageHash)) {
@@ -166,10 +183,26 @@ export const MessageEditorView = ({
           onChange={setMessageValueWrapper}
         />
         <SizedBox height={10} />
+        {partialHashMessage && (
+          <>
+            <LabelText
+              id={'domain_hash'}
+              value={domainHashValue}
+              label={'Domain Hash'}
+            />
+            <SizedBox height={10} />
+            <LabelText
+              id={'eip712_message_hash'}
+              value={eip712MessageHashValue}
+              label={'EIP712 Message Hash'}
+            />
+            <SizedBox height={10} />
+          </>
+        )}
         <LabelText
           id={'message_hash'}
           value={messageHashValue}
-          label={'Message Hash'}
+          label={'Final Message Hash To Sign'}
         />
         <SizedBox height={10} />
         <LabelText
